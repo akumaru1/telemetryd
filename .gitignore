@@ -1,0 +1,11 @@
+# Build directories and binaries
+obj/
+bin/
+
+# Local agent customizations
+.agents/
+
+# Generated documentation (Doxygen)
+docs/
+doxygen_sqlite3.db
+Doxyfile.bak
