@@ -1,7 +1,7 @@
 #include "sysfs_ingest.h"
 #include <stdio.h>
 
-int main() {
+int main(void) {
     double temp = 0.0;
     int res = read_cpu_temp(&temp);
     if (res == 0) {

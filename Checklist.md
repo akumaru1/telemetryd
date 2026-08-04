@@ -30,7 +30,7 @@
 Phase 2: Core Hardware & Kernel Reading (C Logic)
 
 - [x] Sysfs Ingestion: Implement opening and reading CPU thermal metrics from /sys/class/hwmon/hwmon0/temp1_input using standard C File I/O (fopen, fscanf, fclose). | [Plan](docs/plans/sysfs_ingestion_plan.md) | [Walkthrough](docs/walkthroughs/sysfs_ingestion_walkthrough.md)
-- [ ] Procfs Ingestion: Implement parsing /proc/meminfo or /proc/stat to capture memory usage or system activity.
+- [x] Procfs Ingestion: Implement parsing /proc/meminfo or /proc/stat to capture memory usage or system activity. | [Plan](docs/plans/procfs_ingestion_plan.md) | [Walkthrough](docs/walkthroughs/procfs_ingestion_walkthrough.md)
 
 - [ ] Data Struct Definition: Define a clean telemetry_sample_t struct containing timestamp, CPU temp, and RAM utilization.
 
@@ -57,6 +57,11 @@ Phase 3: Advanced Data Structures & POSIX Features
     - [ ] Register SIGHUP signal handler.
 
     - [ ] Write a helper function to re-parse config/daemon.conf (e.g., updating polling frequency or log paths on the fly).
+
+
+
+- Implementing the circular buffer (ring_buffer_t) with mutex lock protection satisfies the "thread-safe circular ring buffer" claim.
+- Registering sigaction() for SIGINT/SIGTERM (to set keep_running = 0 for clean shutdown) and SIGHUP (to trigger config re-parsing) directly matches the "graceful shutdown and runtime config reloading" claim.
 
 ---
 

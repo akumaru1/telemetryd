@@ -13,7 +13,7 @@ OBJ_FILES = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRC_FILES))
 # Executable name
 TARGET = $(BIN_DIR)/telemetryd
 
-.PHONY: all clean test docs
+.PHONY: all clean test test_sysfs test_procfs docs
 
 all: $(TARGET)
 
@@ -29,9 +29,15 @@ $(BIN_DIR) $(OBJ_DIR):
 clean:
 	rm -rf $(OBJ_DIR) $(BIN_DIR) docs/html docs/latex
 
-test: $(SRC_DIR)/sysfs_ingest.c $(TEST_DIR)/test_sysfs.c | $(BIN_DIR)
+test: test_sysfs test_procfs
+
+test_sysfs: $(SRC_DIR)/sysfs_ingest.c $(TEST_DIR)/test_sysfs.c | $(BIN_DIR)
 	$(CC) $(CFLAGS) -o $(BIN_DIR)/test_sysfs $^
 	$(BIN_DIR)/test_sysfs
+
+test_procfs: $(SRC_DIR)/procfs_ingest.c $(TEST_DIR)/test_procfs.c | $(BIN_DIR)
+	$(CC) $(CFLAGS) -o $(BIN_DIR)/test_procfs $^
+	$(BIN_DIR)/test_procfs
 
 docs:
 	doxygen Doxyfile

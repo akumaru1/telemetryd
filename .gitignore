@@ -9,3 +9,8 @@ bin/
 docs/
 doxygen_sqlite3.db
 Doxyfile.bak
+
+# IDEs, Editors, and Language Server files
+.vscode/
+.clangd/
+compile_commands.json
