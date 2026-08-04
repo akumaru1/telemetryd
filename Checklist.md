@@ -29,8 +29,7 @@
 
 Phase 2: Core Hardware & Kernel Reading (C Logic)
 
-- [ ] Sysfs Ingestion: Implement opening and reading CPU thermal metrics from /sys/class/hwmon/hwmon0/temp1_input using standard C File I/O (fopen, fscanf, fclose).
-  
+- [x] Sysfs Ingestion: Implement opening and reading CPU thermal metrics from /sys/class/hwmon/hwmon0/temp1_input using standard C File I/O (fopen, fscanf, fclose). | [Plan](docs/plans/sysfs_ingestion_plan.md) | [Walkthrough](docs/walkthroughs/sysfs_ingestion_walkthrough.md)
 - [ ] Procfs Ingestion: Implement parsing /proc/meminfo or /proc/stat to capture memory usage or system activity.
 
 - [ ] Data Struct Definition: Define a clean telemetry_sample_t struct containing timestamp, CPU temp, and RAM utilization.

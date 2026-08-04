@@ -29,8 +29,9 @@ $(BIN_DIR) $(OBJ_DIR):
 clean:
 	rm -rf $(OBJ_DIR) $(BIN_DIR) docs/html docs/latex
 
-test:
-	@echo "No tests configured yet."
+test: $(SRC_DIR)/sysfs_ingest.c $(TEST_DIR)/test_sysfs.c | $(BIN_DIR)
+	$(CC) $(CFLAGS) -o $(BIN_DIR)/test_sysfs $^
+	$(BIN_DIR)/test_sysfs
 
 docs:
 	doxygen Doxyfile
