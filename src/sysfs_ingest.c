@@ -1,9 +1,12 @@
+#define _POSIX_C_SOURCE 200809L
 #include "sysfs_ingest.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <dirent.h>
 #include <string.h>
 #include <limits.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -30,10 +33,14 @@ static void find_cpu_temp_path(char *resolved_path, size_t max_len) {
             char name_path[PATH_MAX];
             snprintf(name_path, sizeof(name_path), "%s/%s/name", SYSFS_BASE_PATH, entry->d_name);
 
-            FILE *name_fp = fopen(name_path, "r");
-            if (name_fp) {
+            int name_fd = open(name_path, O_RDONLY | O_CLOEXEC);
+            if (name_fd >= 0) {
                 char name_buf[64];
-                if (fgets(name_buf, sizeof(name_buf), name_fp)) {
+                ssize_t bytes_read = read(name_fd, name_buf, sizeof(name_buf) - 1);
+                close(name_fd);
+
+                if (bytes_read > 0) {
+                    name_buf[bytes_read] = '\0';
                     // Remove trailing newline
                     name_buf[strcspn(name_buf, "\n")] = '\0';
 
@@ -41,11 +48,9 @@ static void find_cpu_temp_path(char *resolved_path, size_t max_len) {
                     if (strcmp(name_buf, "k10temp") == 0 || strcmp(name_buf, "coretemp") == 0) {
                         snprintf(best_path, sizeof(best_path), "%s/%s/temp1_input", SYSFS_BASE_PATH, entry->d_name);
                         found_best = 1;
-                        fclose(name_fp);
                         break;
                     }
                 }
-                fclose(name_fp);
             }
         }
     }
@@ -69,19 +74,23 @@ int read_cpu_temp(double *temp_celsius) {
         path_resolved = 1;
     }
 
-    FILE *fp = fopen(temp_path, "r");
-    if (!fp) {
+    int fd = open(temp_path, O_RDONLY | O_CLOEXEC);
+    if (fd < 0) {
         perror("Error opening temperature sysfs file");
         return -2;
     }
 
-    int temp_milli = 0;
-    if (fscanf(fp, "%d", &temp_milli) != 1) {
-        fclose(fp);
+    char buf[32];
+    ssize_t bytes_read = read(fd, buf, sizeof(buf) - 1);
+    close(fd);
+
+    if (bytes_read <= 0) {
         return -3;
     }
 
-    fclose(fp);
+    buf[bytes_read] = '\0';
+    int temp_milli = atoi(buf);
     *temp_celsius = temp_milli / 1000.0;
     return 0;
 }
+
