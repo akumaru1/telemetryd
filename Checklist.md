@@ -40,15 +40,17 @@ Phase 3: Advanced Data Structures & POSIX Features
 
 - [ ] Ring Buffer Implementation:
 
-    - [ ] Implement fixed-size circular array struct (ring_buffer_t).
+    - [ ] Implement fixed-size circular array struct (ring_buffer_t).".
 
     - [ ] Write thread-safe / clean push() and pop() operations.
+          - Implementing the circular buffer (ring_buffer_t) with mutex lock protection satisfies the "thread-safe circular ring buffer
 
     - [ ] Add logic to flush buffer entries to a structured log file (e.g., telemetry.log) when full or on time intervals.
 
 - [ ] POSIX Signal Handling:
 
     - [ ] Register SIGINT and SIGTERM using sigaction() to set a volatile sig_atomic_t keep_running flag to 0.
+        - Registering sigaction() for SIGINT/SIGTERM (to set keep_running = 0 for clean shutdown) and SIGHUP (to trigger config re-parsing) directly matches the "graceful shutdown and runtime config reloading".
 
     - [ ] Ensure all file descriptors are closed and allocated memory is freed during shutdown.
 
@@ -59,9 +61,6 @@ Phase 3: Advanced Data Structures & POSIX Features
     - [ ] Write a helper function to re-parse config/daemon.conf (e.g., updating polling frequency or log paths on the fly).
 
 
-
-- Implementing the circular buffer (ring_buffer_t) with mutex lock protection satisfies the "thread-safe circular ring buffer".
-- Registering sigaction() for SIGINT/SIGTERM (to set keep_running = 0 for clean shutdown) and SIGHUP (to trigger config re-parsing) directly matches the "graceful shutdown and runtime config reloading".
 
 ---
 
