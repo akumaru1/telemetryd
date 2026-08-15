@@ -38,7 +38,7 @@ Phase 2: Core Hardware & Kernel Reading (C Logic)
 
 Phase 3: Advanced Data Structures & POSIX Features
 
-- [ ] Ring Buffer Implementation:
+- [x] Ring Buffer Implementation:
 
     - [x] Implement fixed-size circular array struct (ring_buffer_t). | [Plan](docs/plans/ring_buffer_plan.md) | [Walkthrough](docs/walkthroughs/ring_buffer_walkthrough.md)
 
@@ -47,7 +47,7 @@ Phase 3: Advanced Data Structures & POSIX Features
 
     - [x] Add logic to flush buffer entries to a structured log file (e.g., telemetry.log) when full or on time intervals. | [Plan](docs/plans/daemon_integration_plan.md) | [Walkthrough](docs/walkthroughs/daemon_integration_walkthrough.md)
 
-- [ ] POSIX Signal Handling:
+- [x] POSIX Signal Handling:
 
     - [x] Register SIGINT and SIGTERM using sigaction() to set a volatile sig_atomic_t keep_running flag to 0. | [Plan](docs/plans/signal_handling_plan.md) | [Walkthrough](docs/walkthroughs/signal_handling_walkthrough.md)
 

@@ -24,6 +24,14 @@ static ring_buffer_t rb;
 /* Log file descriptor and protecting mutex */
 static FILE *log_file = NULL;
 static pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
+static int console_mode = 0;
+
+static void close_log_file(void) {
+  if (log_file && log_file != stdout && log_file != stderr) {
+    fclose(log_file);
+    log_file = NULL;
+  }
+}
 
 /* Daemon configuration variables and protecting mutex */
 static int polling_frequency = DEFAULT_POLLING_FREQUENCY;
@@ -164,7 +172,14 @@ static void *writer_thread_func(void *arg) {
   return NULL;
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
+  // Check for console mode flag
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--console") == 0) {
+      console_mode = 1;
+    }
+  }
+
   // Load initial configuration
   if (parse_config(CONFIG_PATH, &polling_frequency, log_path, sizeof(log_path)) != 0) {
     printf("Could not parse config, using defaults: polling_freq = %d, log_path = %s\n",
@@ -180,12 +195,17 @@ int main(void) {
     return 1;
   }
 
-  // Open log file for appending
-  log_file = fopen(log_path, "a");
-  if (!log_file) {
-    perror("Failed to open log file");
-    ring_buffer_destroy(&rb);
-    return 1;
+  // Open log destination
+  if (console_mode) {
+    log_file = stdout;
+    printf("Running in console mode. Outputting directly to stdout.\n");
+  } else {
+    log_file = fopen(log_path, "a");
+    if (!log_file) {
+      perror("Failed to open log file");
+      ring_buffer_destroy(&rb);
+      return 1;
+    }
   }
 
   // Set up sigaction structure
@@ -198,21 +218,21 @@ int main(void) {
   // Register handlers
   if (sigaction(SIGINT, &sa, NULL) < 0) {
     perror("Error registering SIGINT handler");
-    fclose(log_file);
+    close_log_file();
     ring_buffer_destroy(&rb);
     return 1;
   }
 
   if (sigaction(SIGTERM, &sa, NULL) < 0) {
     perror("Error registering SIGTERM handler");
-    fclose(log_file);
+    close_log_file();
     ring_buffer_destroy(&rb);
     return 1;
   }
 
   if (sigaction(SIGHUP, &sa, NULL) < 0) {
     perror("Error registering SIGHUP handler");
-    fclose(log_file);
+    close_log_file();
     ring_buffer_destroy(&rb);
     return 1;
   }
@@ -226,7 +246,7 @@ int main(void) {
 
   if (pthread_create(&collector_thread, NULL, collector_thread_func, NULL) != 0) {
     fprintf(stderr, "Error creating collector thread.\n");
-    fclose(log_file);
+    close_log_file();
     ring_buffer_destroy(&rb);
     return 1;
   }
@@ -235,7 +255,7 @@ int main(void) {
     fprintf(stderr, "Error creating writer thread.\n");
     keep_running = 0; // stop collector
     pthread_join(collector_thread, NULL);
-    fclose(log_file);
+    close_log_file();
     ring_buffer_destroy(&rb);
     return 1;
   }
@@ -253,15 +273,13 @@ int main(void) {
         pthread_mutex_lock(&config_mutex);
         polling_frequency = new_freq;
 
-        if (strcmp(log_path, new_path) != 0) {
+        if (!console_mode && strcmp(log_path, new_path) != 0) {
           printf("Log path changed from '%s' to '%s'. Reopening log file...\n", log_path, new_path);
           strncpy(log_path, new_path, sizeof(log_path) - 1);
           log_path[sizeof(log_path) - 1] = '\0';
 
           pthread_mutex_lock(&log_mutex);
-          if (log_file) {
-            fclose(log_file);
-          }
+          close_log_file();
           log_file = fopen(log_path, "a");
           if (!log_file) {
             perror("Failed to open new log file");
@@ -285,10 +303,7 @@ int main(void) {
 
   // Close log file
   pthread_mutex_lock(&log_mutex);
-  if (log_file) {
-    fclose(log_file);
-    log_file = NULL;
-  }
+  close_log_file();
   pthread_mutex_unlock(&log_mutex);
 
   // Clean up ring buffer and mutexes/condition variables
