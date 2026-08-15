@@ -44,7 +44,7 @@ test_telemetry: $(SRC_DIR)/sysfs_ingest.c $(SRC_DIR)/procfs_ingest.c $(TEST_DIR)
 	$(BIN_DIR)/test_telemetry
 
 test_ring_buffer: $(SRC_DIR)/ring_buffer.c $(TEST_DIR)/test_ring_buffer.c | $(BIN_DIR)
-	$(CC) $(CFLAGS) -o $(BIN_DIR)/test_ring_buffer $^
+	$(CC) $(CFLAGS) -pthread -o $(BIN_DIR)/test_ring_buffer $^
 	$(BIN_DIR)/test_ring_buffer
 
 docs:

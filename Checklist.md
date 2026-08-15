@@ -40,10 +40,10 @@ Phase 3: Advanced Data Structures & POSIX Features
 
 - [ ] Ring Buffer Implementation:
 
-    - [ ] Implement fixed-size circular array struct (ring_buffer_t).".
+    - [x] Implement fixed-size circular array struct (ring_buffer_t). | [Plan](docs/plans/ring_buffer_plan.md) | [Walkthrough](docs/walkthroughs/ring_buffer_walkthrough.md)
 
-    - [ ] Write thread-safe / clean push() and pop() operations.
-          - Implementing the circular buffer (ring_buffer_t) with mutex lock protection satisfies the "thread-safe circular ring buffer
+    - [x] Write thread-safe / clean push() and pop() operations. | [Plan](docs/plans/ring_buffer_concurrency_plan.md) | [Walkthrough](docs/walkthroughs/ring_buffer_concurrency_walkthrough.md)
+          - Implementing the circular buffer (ring_buffer_t) with mutex lock protection satisfies the "thread-safe circular ring buffer"
 
     - [ ] Add logic to flush buffer entries to a structured log file (e.g., telemetry.log) when full or on time intervals.
 
