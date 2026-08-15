@@ -49,8 +49,7 @@ Phase 3: Advanced Data Structures & POSIX Features
 
 - [ ] POSIX Signal Handling:
 
-    - [ ] Register SIGINT and SIGTERM using sigaction() to set a volatile sig_atomic_t keep_running flag to 0.
-        - Registering sigaction() for SIGINT/SIGTERM (to set keep_running = 0 for clean shutdown) and SIGHUP (to trigger config re-parsing) directly matches the "graceful shutdown and runtime config reloading".
+    - [x] Register SIGINT and SIGTERM using sigaction() to set a volatile sig_atomic_t keep_running flag to 0. | [Plan](docs/plans/signal_handling_plan.md) | [Walkthrough](docs/walkthroughs/signal_handling_walkthrough.md)
 
     - [ ] Ensure all file descriptors are closed and allocated memory is freed during shutdown.
 
@@ -60,7 +59,7 @@ Phase 3: Advanced Data Structures & POSIX Features
 
     - [ ] Write a helper function to re-parse config/daemon.conf (e.g., updating polling frequency or log paths on the fly).
 
-
+- Registering sigaction() for SIGINT/SIGTERM (to set keep_running = 0 for clean shutdown) and SIGHUP (to trigger config re-parsing) directly matches the "graceful shutdown and runtime config reloading".
 
 ---
 
