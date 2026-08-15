@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -pedantic -std=c99 -g -Iinclude
+CFLAGS = -Wall -Wextra -pedantic -std=c99 -g -Iinclude -pthread
 SRC_DIR = src
 INC_DIR = include
 OBJ_DIR = obj

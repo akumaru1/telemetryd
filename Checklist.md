@@ -45,13 +45,13 @@ Phase 3: Advanced Data Structures & POSIX Features
     - [x] Write thread-safe / clean push() and pop() operations. | [Plan](docs/plans/ring_buffer_concurrency_plan.md) | [Walkthrough](docs/walkthroughs/ring_buffer_concurrency_walkthrough.md)
           - Implementing the circular buffer (ring_buffer_t) with mutex lock protection satisfies the "thread-safe circular ring buffer"
 
-    - [ ] Add logic to flush buffer entries to a structured log file (e.g., telemetry.log) when full or on time intervals.
+    - [x] Add logic to flush buffer entries to a structured log file (e.g., telemetry.log) when full or on time intervals. | [Plan](docs/plans/daemon_integration_plan.md) | [Walkthrough](docs/walkthroughs/daemon_integration_walkthrough.md)
 
 - [ ] POSIX Signal Handling:
 
     - [x] Register SIGINT and SIGTERM using sigaction() to set a volatile sig_atomic_t keep_running flag to 0. | [Plan](docs/plans/signal_handling_plan.md) | [Walkthrough](docs/walkthroughs/signal_handling_walkthrough.md)
 
-    - [ ] Ensure all file descriptors are closed and allocated memory is freed during shutdown.
+    - [x] Ensure all file descriptors are closed and allocated memory is freed during shutdown. | [Plan](docs/plans/daemon_integration_plan.md) | [Walkthrough](docs/walkthroughs/daemon_integration_walkthrough.md)
 
     - [ ] Dynamic Re-configuration (SIGHUP):
 
