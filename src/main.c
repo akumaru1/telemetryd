@@ -14,8 +14,9 @@
 #define DEFAULT_POLLING_FREQUENCY 5
 #define DEFAULT_LOG_PATH "telemetry.log"
 
-/* Volatile sig_atomic_t flag for graceful shutdown */
+/* Volatile sig_atomic_t flags for signal handling */
 volatile sig_atomic_t keep_running = 1;
+volatile sig_atomic_t reload_config = 0;
 
 /* Ring buffer for telemetry samples */
 static ring_buffer_t rb;
@@ -24,15 +25,22 @@ static ring_buffer_t rb;
 static FILE *log_file = NULL;
 static pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-/* Signal handler for SIGINT and SIGTERM */
+/* Daemon configuration variables and protecting mutex */
+static int polling_frequency = DEFAULT_POLLING_FREQUENCY;
+static char log_path[256] = DEFAULT_LOG_PATH;
+static pthread_mutex_t config_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/* Signal handler for SIGINT, SIGTERM, and SIGHUP */
 static void handle_signal(int sig) {
   if (sig == SIGINT || sig == SIGTERM) {
     keep_running = 0;
+  } else if (sig == SIGHUP) {
+    reload_config = 1;
   }
 }
 
 /* Minimal parser for daemon.conf */
-static int parse_config(const char *config_path, int *polling_frequency, char *log_path, size_t max_log_path_len) {
+static int parse_config(const char *config_path, int *polling_frequency_out, char *log_path_out, size_t max_log_path_len) {
   FILE *fp = fopen(config_path, "r");
   if (!fp) {
     return -1;
@@ -49,10 +57,10 @@ static int parse_config(const char *config_path, int *polling_frequency, char *l
     char val[128];
     if (sscanf(line, " %127[^= ] = %127s", key, val) == 2) {
       if (strcmp(key, "polling_frequency") == 0) {
-        *polling_frequency = atoi(val);
+        *polling_frequency_out = atoi(val);
       } else if (strcmp(key, "log_path") == 0) {
-        strncpy(log_path, val, max_log_path_len - 1);
-        log_path[max_log_path_len - 1] = '\0';
+        strncpy(log_path_out, val, max_log_path_len - 1);
+        log_path_out[max_log_path_len - 1] = '\0';
       }
     }
   }
@@ -63,8 +71,8 @@ static int parse_config(const char *config_path, int *polling_frequency, char *l
 
 /* Metrics collector thread routine */
 static void *collector_thread_func(void *arg) {
-  int polling_freq = *(int *)arg;
-  printf("Collector thread started. Polling frequency: %d seconds.\n", polling_freq);
+  (void)arg;
+  printf("Collector thread started.\n");
 
   while (keep_running) {
     telemetry_sample_t sample;
@@ -82,8 +90,13 @@ static void *collector_thread_func(void *arg) {
       fprintf(stderr, "Collector error: failed to read metrics (CPU res: %d, RAM res: %d)\n", res_cpu, res_ram);
     }
 
-    // Sleep in 1-second ticks so we can exit quickly on signal
-    for (int i = 0; i < polling_freq && keep_running; i++) {
+    // Get current polling frequency thread-safely
+    pthread_mutex_lock(&config_mutex);
+    int current_freq = polling_frequency;
+    pthread_mutex_unlock(&config_mutex);
+
+    // Sleep in 1-second ticks so we can exit quickly on signal or config reload
+    for (int i = 0; i < current_freq && keep_running && !reload_config; i++) {
       sleep(1);
     }
   }
@@ -152,10 +165,7 @@ static void *writer_thread_func(void *arg) {
 }
 
 int main(void) {
-  int polling_frequency = DEFAULT_POLLING_FREQUENCY;
-  char log_path[256] = DEFAULT_LOG_PATH;
-
-  // Load configuration
+  // Load initial configuration
   if (parse_config(CONFIG_PATH, &polling_frequency, log_path, sizeof(log_path)) != 0) {
     printf("Could not parse config, using defaults: polling_freq = %d, log_path = %s\n",
            polling_frequency, log_path);
@@ -200,6 +210,13 @@ int main(void) {
     return 1;
   }
 
+  if (sigaction(SIGHUP, &sa, NULL) < 0) {
+    perror("Error registering SIGHUP handler");
+    fclose(log_file);
+    ring_buffer_destroy(&rb);
+    return 1;
+  }
+
   printf("Telemetry daemon started. PID: %d. Press Ctrl+C or kill to stop...\n",
          getpid());
 
@@ -207,7 +224,7 @@ int main(void) {
   pthread_t collector_thread;
   pthread_t writer_thread;
 
-  if (pthread_create(&collector_thread, NULL, collector_thread_func, &polling_frequency) != 0) {
+  if (pthread_create(&collector_thread, NULL, collector_thread_func, NULL) != 0) {
     fprintf(stderr, "Error creating collector thread.\n");
     fclose(log_file);
     ring_buffer_destroy(&rb);
@@ -223,8 +240,40 @@ int main(void) {
     return 1;
   }
 
-  // Main thread waits for shutdown signal
+  // Main thread waits for shutdown or reload signal
   while (keep_running) {
+    if (reload_config) {
+      reload_config = 0;
+      printf("SIGHUP received. Reloading configuration...\n");
+
+      int new_freq = DEFAULT_POLLING_FREQUENCY;
+      char new_path[256] = DEFAULT_LOG_PATH;
+
+      if (parse_config(CONFIG_PATH, &new_freq, new_path, sizeof(new_path)) == 0) {
+        pthread_mutex_lock(&config_mutex);
+        polling_frequency = new_freq;
+
+        if (strcmp(log_path, new_path) != 0) {
+          printf("Log path changed from '%s' to '%s'. Reopening log file...\n", log_path, new_path);
+          strncpy(log_path, new_path, sizeof(log_path) - 1);
+          log_path[sizeof(log_path) - 1] = '\0';
+
+          pthread_mutex_lock(&log_mutex);
+          if (log_file) {
+            fclose(log_file);
+          }
+          log_file = fopen(log_path, "a");
+          if (!log_file) {
+            perror("Failed to open new log file");
+          }
+          pthread_mutex_unlock(&log_mutex);
+        }
+        pthread_mutex_unlock(&config_mutex);
+        printf("Configuration reloaded successfully. Frequency: %d, Log Path: %s\n", new_freq, new_path);
+      } else {
+        fprintf(stderr, "Failed to parse config file on SIGHUP. Keeping existing configuration.\n");
+      }
+    }
     sleep(1);
   }
 

@@ -53,11 +53,11 @@ Phase 3: Advanced Data Structures & POSIX Features
 
     - [x] Ensure all file descriptors are closed and allocated memory is freed during shutdown. | [Plan](docs/plans/daemon_integration_plan.md) | [Walkthrough](docs/walkthroughs/daemon_integration_walkthrough.md)
 
-    - [ ] Dynamic Re-configuration (SIGHUP):
+    - [x] Dynamic Re-configuration (SIGHUP): | [Plan](docs/plans/sighup_reconfig_plan.md) | [Walkthrough](docs/walkthroughs/sighup_reconfig_walkthrough.md)
 
-    - [ ] Register SIGHUP signal handler.
+    - [x] Register SIGHUP signal handler. | [Plan](docs/plans/sighup_reconfig_plan.md) | [Walkthrough](docs/walkthroughs/sighup_reconfig_walkthrough.md)
 
-    - [ ] Write a helper function to re-parse config/daemon.conf (e.g., updating polling frequency or log paths on the fly).
+    - [x] Write a helper function to re-parse config/daemon.conf (e.g., updating polling frequency or log paths on the fly). | [Plan](docs/plans/sighup_reconfig_plan.md) | [Walkthrough](docs/walkthroughs/sighup_reconfig_walkthrough.md)
 
 - Registering sigaction() for SIGINT/SIGTERM (to set keep_running = 0 for clean shutdown) and SIGHUP (to trigger config re-parsing) directly matches the "graceful shutdown and runtime config reloading".
 
