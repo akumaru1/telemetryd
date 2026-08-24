@@ -7,6 +7,7 @@
 #include <limits.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -61,23 +62,27 @@ static void find_cpu_temp_path(char *resolved_path, size_t max_len) {
     }
 }
 
+static char resolved_temp_path[PATH_MAX] = "";
+static pthread_once_t temp_path_once = PTHREAD_ONCE_INIT;
+
+static void resolve_temp_path_once(void) {
+    find_cpu_temp_path(resolved_temp_path, sizeof(resolved_temp_path));
+}
+
 int read_cpu_temp(double *temp_celsius) {
     if (!temp_celsius) {
-        return -1;
+        return TEMP_ERR_INVALID_ARG;
     }
 
-    static char temp_path[PATH_MAX] = "";
-    static int path_resolved = 0;
+    /* pthread_once guarantees resolve_temp_path_once() runs exactly once
+     * even if multiple threads call read_cpu_temp() concurrently before
+     * the path has been resolved. */
+    pthread_once(&temp_path_once, resolve_temp_path_once);
 
-    if (!path_resolved) {
-        find_cpu_temp_path(temp_path, sizeof(temp_path));
-        path_resolved = 1;
-    }
-
-    int fd = open(temp_path, O_RDONLY | O_CLOEXEC);
+    int fd = open(resolved_temp_path, O_RDONLY | O_CLOEXEC);
     if (fd < 0) {
         perror("Error opening temperature sysfs file");
-        return -2;
+        return TEMP_ERR_NO_FILE;
     }
 
     char buf[32];
@@ -85,12 +90,36 @@ int read_cpu_temp(double *temp_celsius) {
     close(fd);
 
     if (bytes_read <= 0) {
-        return -3;
+        return TEMP_ERR_READ_FAILED;
     }
 
     buf[bytes_read] = '\0';
-    int temp_milli = atoi(buf);
+
+    char *endptr;
+    long temp_milli = strtol(buf, &endptr, 10);
+    /* endptr == buf: no digits parsed at all. Allow a trailing newline
+     * (sysfs files are newline-terminated) but reject anything else. */
+    if (endptr == buf || (*endptr != '\0' && *endptr != '\n')) {
+        return TEMP_ERR_PARSE_FAILED;
+    }
+    /* Sanity-check the range: sysfs hwmon temps are millidegrees C.
+     * -50C to 200C comfortably covers real hardware and catches garbage. */
+    if (temp_milli < -50000 || temp_milli > 200000) {
+        return TEMP_ERR_PARSE_FAILED;
+    }
+
     *temp_celsius = temp_milli / 1000.0;
     return 0;
+}
+
+const char *sysfs_ingest_strerror(int err) {
+    switch (err) {
+        case 0:                     return "success";
+        case TEMP_ERR_INVALID_ARG:  return "invalid argument (NULL output pointer)";
+        case TEMP_ERR_NO_FILE:      return "sysfs temperature file not found or not openable";
+        case TEMP_ERR_READ_FAILED:  return "read from sysfs temperature file failed";
+        case TEMP_ERR_PARSE_FAILED: return "sysfs temperature value unparsable or out of range";
+        default:                    return "unknown error";
+    }
 }
 
