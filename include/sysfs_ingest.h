@@ -6,6 +6,7 @@
 #define TEMP_ERR_NO_FILE       (-2) /* sysfs temp file could not be opened */
 #define TEMP_ERR_READ_FAILED   (-3) /* read() from sysfs temp file failed */
 #define TEMP_ERR_PARSE_FAILED  (-4) /* sysfs contents were not a valid reading */
+#define TEMP_ERR_NO_SENSOR     (-5) /* no supported hwmon CPU temp sensor found */
 
 /**
  * @brief Reads the CPU temperature from the sysfs path.

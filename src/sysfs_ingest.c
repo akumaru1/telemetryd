@@ -9,18 +9,15 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#ifndef PATH_MAX
 #define PATH_MAX 4096
-#endif
 
-#define SYSFS_BASE_PATH "/sys/class/hwmon"
-#define DEFAULT_TEMP_PATH "/sys/class/hwmon/hwmon0/temp1_input"
+
+#define SYSFS_PATH "/sys/class/hwmon"
 
 static void find_cpu_temp_path(char *resolved_path, size_t max_len) {
-    // Default fallback
-    snprintf(resolved_path, max_len, "%s", DEFAULT_TEMP_PATH);
+    resolved_path[0] = '\0';
 
-    DIR *dir = opendir(SYSFS_BASE_PATH);
+    DIR *dir = opendir(SYSFS_PATH);
     if (!dir) {
         return;
     }
@@ -32,7 +29,7 @@ static void find_cpu_temp_path(char *resolved_path, size_t max_len) {
     while ((entry = readdir(dir)) != NULL) {
         if (strncmp(entry->d_name, "hwmon", 5) == 0) {
             char name_path[PATH_MAX];
-            snprintf(name_path, sizeof(name_path), "%s/%s/name", SYSFS_BASE_PATH, entry->d_name);
+            snprintf(name_path, sizeof(name_path), "%s/%s/name", SYSFS_PATH, entry->d_name);
 
             int name_fd = open(name_path, O_RDONLY | O_CLOEXEC);
             if (name_fd >= 0) {
@@ -47,7 +44,7 @@ static void find_cpu_temp_path(char *resolved_path, size_t max_len) {
 
                     // Check for AMD (k10temp) or Intel (coretemp) core sensors
                     if (strcmp(name_buf, "k10temp") == 0 || strcmp(name_buf, "coretemp") == 0) {
-                        snprintf(best_path, sizeof(best_path), "%s/%s/temp1_input", SYSFS_BASE_PATH, entry->d_name);
+                        snprintf(best_path, sizeof(best_path), "%s/%s/temp1_input", SYSFS_PATH, entry->d_name);
                         found_best = 1;
                         break;
                     }
@@ -74,10 +71,13 @@ int read_cpu_temp(double *temp_celsius) {
         return TEMP_ERR_INVALID_ARG;
     }
 
-    /* pthread_once guarantees resolve_temp_path_once() runs exactly once
-     * even if multiple threads call read_cpu_temp() concurrently before
-     * the path has been resolved. */
     pthread_once(&temp_path_once, resolve_temp_path_once);
+
+    if (resolved_temp_path[0] == '\0') {
+        fprintf(stderr, "Error: no supported CPU temp sensor found under %s\n",
+                SYSFS_PATH);
+        return TEMP_ERR_NO_SENSOR;
+    }
 
     int fd = open(resolved_temp_path, O_RDONLY | O_CLOEXEC);
     if (fd < 0) {
@@ -102,9 +102,8 @@ int read_cpu_temp(double *temp_celsius) {
     if (endptr == buf || (*endptr != '\0' && *endptr != '\n')) {
         return TEMP_ERR_PARSE_FAILED;
     }
-    /* Sanity-check the range: sysfs hwmon temps are millidegrees C.
-     * -50C to 200C comfortably covers real hardware and catches garbage. */
-    if (temp_milli < -50000 || temp_milli > 200000) {
+
+    if (temp_milli < 0 || temp_milli > 150000) {
         return TEMP_ERR_PARSE_FAILED;
     }
 
@@ -119,6 +118,7 @@ const char *sysfs_ingest_strerror(int err) {
         case TEMP_ERR_NO_FILE:      return "sysfs temperature file not found or not openable";
         case TEMP_ERR_READ_FAILED:  return "read from sysfs temperature file failed";
         case TEMP_ERR_PARSE_FAILED: return "sysfs temperature value unparsable or out of range";
+        case TEMP_ERR_NO_SENSOR:    return "no supported CPU temp sensor (k10temp/coretemp) found";
         default:                    return "unknown error";
     }
 }
