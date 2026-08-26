@@ -95,8 +95,9 @@ static void *collector_thread_func(void *arg) {
         fprintf(stderr, "Collector warning: failed to push sample to ring buffer: %d\n", push_res);
       }
     } else {
-      fprintf(stderr, "Collector error: failed to read metrics (CPU: %s [%d], RAM res: %d)\n",
-              sysfs_ingest_strerror(res_cpu), res_cpu, res_ram);
+      fprintf(stderr, "Collector error: failed to read metrics (CPU: %s [%d], RAM: %s [%d])\n",
+              sysfs_ingest_strerror(res_cpu), res_cpu,
+              procfs_ingest_strerror(res_ram), res_ram);
     }
 
     // Get current polling frequency thread-safely
