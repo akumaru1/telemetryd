@@ -3,38 +3,38 @@
 
 int ring_buffer_init(ring_buffer_t *rb, size_t capacity) {
     if (rb == NULL || capacity == 0) {
-        return -1;
+        return RB_ERR_INVALID_ARG;
     }
-    
+
     // Capacity must be a power of two to support fast bitwise wrapping
     if ((capacity & (capacity - 1)) != 0) {
-        return -3;
+        return RB_ERR_NOT_POWER_OF_TWO;
     }
-    
+
     rb->buffer = malloc(capacity * sizeof(telemetry_sample_t));
     if (rb->buffer == NULL) {
-        return -2;
+        return RB_ERR_ALLOC_FAILED;
     }
-    
+
     if (pthread_mutex_init(&rb->lock, NULL) != 0) {
         free(rb->buffer);
         rb->buffer = NULL;
-        return -4;
+        return RB_ERR_MUTEX_INIT_FAILED;
     }
-    
+
     if (pthread_cond_init(&rb->not_empty, NULL) != 0) {
         pthread_mutex_destroy(&rb->lock);
         free(rb->buffer);
         rb->buffer = NULL;
-        return -5;
+        return RB_ERR_COND_INIT_FAILED;
     }
-    
+
     if (pthread_cond_init(&rb->not_full, NULL) != 0) {
         pthread_cond_destroy(&rb->not_empty);
         pthread_mutex_destroy(&rb->lock);
         free(rb->buffer);
         rb->buffer = NULL;
-        return -6;
+        return RB_ERR_COND_INIT_FAILED;
     }
     
     rb->capacity = capacity;
@@ -70,16 +70,16 @@ void ring_buffer_destroy(ring_buffer_t *rb) {
 
 int ring_buffer_push(ring_buffer_t *rb, telemetry_sample_t sample) {
     if (rb == NULL) {
-        return -1;
+        return RB_ERR_INVALID_ARG;
     }
-    
+
     pthread_mutex_lock(&rb->lock);
-    
+
     if (rb->buffer == NULL) {
         pthread_mutex_unlock(&rb->lock);
-        return -2;
+        return RB_ERR_NOT_INITIALIZED;
     }
-    
+
     if (rb->size == rb->capacity) {
         // Buffer is full: overwrite the oldest element at head
         rb->buffer[rb->tail] = sample;
@@ -100,19 +100,19 @@ int ring_buffer_push(ring_buffer_t *rb, telemetry_sample_t sample) {
 
 int ring_buffer_pop(ring_buffer_t *rb, telemetry_sample_t *sample) {
     if (rb == NULL || sample == NULL) {
-        return -1;
+        return RB_ERR_INVALID_ARG;
     }
-    
+
     pthread_mutex_lock(&rb->lock);
-    
+
     if (rb->buffer == NULL) {
         pthread_mutex_unlock(&rb->lock);
-        return -2;
+        return RB_ERR_NOT_INITIALIZED;
     }
-    
+
     if (rb->size == 0) {
         pthread_mutex_unlock(&rb->lock);
-        return -3; // Buffer is empty
+        return RB_ERR_EMPTY;
     }
     
     *sample = rb->buffer[rb->head];
@@ -121,6 +121,20 @@ int ring_buffer_pop(ring_buffer_t *rb, telemetry_sample_t *sample) {
     
     pthread_cond_signal(&rb->not_full);
     pthread_mutex_unlock(&rb->lock);
-    
+
     return 0;
+}
+
+const char *ring_buffer_strerror(int err) {
+    switch (err) {
+        case 0:                        return "success";
+        case RB_ERR_INVALID_ARG:       return "invalid argument (NULL pointer, or zero capacity)";
+        case RB_ERR_ALLOC_FAILED:      return "malloc() for the sample buffer failed";
+        case RB_ERR_NOT_POWER_OF_TWO:  return "capacity was not a power of two";
+        case RB_ERR_MUTEX_INIT_FAILED: return "pthread_mutex_init() failed";
+        case RB_ERR_COND_INIT_FAILED:  return "pthread_cond_init() failed";
+        case RB_ERR_NOT_INITIALIZED:   return "ring buffer is not initialized, or has already been destroyed";
+        case RB_ERR_EMPTY:             return "ring buffer is empty";
+        default:                       return "unknown error";
+    }
 }
