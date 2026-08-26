@@ -17,9 +17,6 @@ int read_ram_utilization(double *ram_utilization) {
 
     char line[256];
     unsigned long mem_total = 0;
-    unsigned long mem_free = 0;
-    unsigned long mem_buffers = 0;
-    unsigned long mem_cached = 0;
     unsigned long mem_available = 0;
     int has_total = 0;
     int has_available = 0;
@@ -29,12 +26,6 @@ int read_ram_utilization(double *ram_utilization) {
             if (sscanf(line + 9, "%lu", &mem_total) == 1) {
                 has_total = 1;
             }
-        } else if (strncmp(line, "MemFree:", 8) == 0) {
-            sscanf(line + 8, "%lu", &mem_free);
-        } else if (strncmp(line, "Buffers:", 8) == 0) {
-            sscanf(line + 8, "%lu", &mem_buffers);
-        } else if (strncmp(line, "Cached:", 7) == 0) {
-            sscanf(line + 7, "%lu", &mem_cached);
         } else if (strncmp(line, "MemAvailable:", 13) == 0) {
             if (sscanf(line + 13, "%lu", &mem_available) == 1) {
                 has_available = 1;
@@ -55,7 +46,8 @@ int read_ram_utilization(double *ram_utilization) {
     }
 
     if (!has_available) {
-        mem_available = mem_free + mem_buffers + mem_cached;
+        fprintf(stderr, "Error: MemAvailable missing in %s\n", PROCFS_MEMINFO_PATH);
+        return RAM_ERR_NO_AVAILABLE;
     }
 
     if (mem_available > mem_total) {
@@ -73,6 +65,7 @@ const char *procfs_ingest_strerror(int err) {
         case RAM_ERR_NO_FILE:      return "/proc/meminfo not found or not openable";
         case RAM_ERR_READ_FAILED:  return "read from /proc/meminfo failed";
         case RAM_ERR_PARSE_FAILED: return "/proc/meminfo missing or invalid MemTotal field";
+        case RAM_ERR_NO_AVAILABLE: return "/proc/meminfo missing MemAvailable field";
         default:                   return "unknown error";
     }
 }
