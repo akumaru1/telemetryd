@@ -191,7 +191,7 @@ int main(int argc, char *argv[]) {
            polling_frequency, log_path);
   }
 
-  // Initialize ring buffer with a power-of-two capacity
+  // Initialize ring buffer
   if (ring_buffer_init(&rb, 64) != 0) {
     fprintf(stderr, "Failed to initialize ring buffer.\n");
     return 1;

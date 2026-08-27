@@ -8,31 +8,27 @@
 /* Error codes returned by ring_buffer_init(), ring_buffer_push(), and ring_buffer_pop() */
 #define RB_ERR_INVALID_ARG       (-1) /* a required pointer argument was NULL, or capacity was 0 */
 #define RB_ERR_ALLOC_FAILED      (-2) /* malloc() for the sample buffer failed (ring_buffer_init) */
-#define RB_ERR_NOT_POWER_OF_TWO  (-3) /* capacity was not a power of two (ring_buffer_init) */
-#define RB_ERR_MUTEX_INIT_FAILED (-4) /* pthread_mutex_init() failed (ring_buffer_init) */
-#define RB_ERR_COND_INIT_FAILED  (-5) /* pthread_cond_init() failed (ring_buffer_init) */
-#define RB_ERR_NOT_INITIALIZED   (-6) /* buffer is not initialized, or has already been destroyed (ring_buffer_push/ring_buffer_pop) */
-#define RB_ERR_EMPTY             (-7) /* buffer has no samples to pop (ring_buffer_pop) */
+#define RB_ERR_MUTEX_INIT_FAILED (-3) /* pthread_mutex_init() failed (ring_buffer_init) */
+#define RB_ERR_NOT_INITIALIZED   (-4) /* buffer is not initialized, or has already been destroyed (ring_buffer_push/ring_buffer_pop) */
+#define RB_ERR_EMPTY             (-5) /* buffer has no samples to pop (ring_buffer_pop) */
 
 /**
  * @brief Circular ring buffer structure for storing telemetry samples.
  */
 typedef struct {
     telemetry_sample_t *buffer; /**< Dynamic array of telemetry samples */
-    size_t capacity;            /**< Maximum capacity of the buffer (must be a power of two) */
+    size_t capacity;            /**< Maximum capacity of the buffer */
     size_t head;                /**< Index of the oldest sample (read pointer) */
     size_t tail;                /**< Index of the next available sample slot (write pointer) */
     size_t size;                /**< Current number of samples stored in the buffer */
     pthread_mutex_t lock;       /**< Mutex lock for thread-safety */
-    pthread_cond_t not_empty;   /**< Condition variable signaling buffer is not empty */
-    pthread_cond_t not_full;    /**< Condition variable signaling buffer is not full */
 } ring_buffer_t;
 
 /**
  * @brief Initializes the ring buffer with the specified capacity.
  * 
  * @param rb Pointer to the ring_buffer_t struct to initialize.
- * @param capacity The number of telemetry samples the buffer can hold (must be a power of two).
+ * @param capacity The number of telemetry samples the buffer can hold.
  * @return int 0 on success, negative RB_ERR_* value on error.
  */
 int ring_buffer_init(ring_buffer_t *rb, size_t capacity);

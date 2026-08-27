@@ -48,14 +48,18 @@ void *consumer_func(void *arg) {
 int main(void) {
     ring_buffer_t rb;
     
-    // Test 1: Invalid capacity (not a power of two)
-    int res_invalid = ring_buffer_init(&rb, 10);
-    assert(res_invalid != 0);
-    
+    // Test 1: Invalid capacity (zero)
     int res_invalid_zero = ring_buffer_init(&rb, 0);
     assert(res_invalid_zero != 0);
-    
-    // Test 2: Valid power-of-two capacity initialization
+
+    // Test 2: Non-power-of-two capacity is valid (no longer restricted)
+    ring_buffer_t rb_non_pow2;
+    int res_non_pow2 = ring_buffer_init(&rb_non_pow2, 10);
+    assert(res_non_pow2 == 0);
+    assert(rb_non_pow2.capacity == 10);
+    ring_buffer_destroy(&rb_non_pow2);
+
+    // Test 3: Valid capacity initialization
     int res_valid = ring_buffer_init(&rb, 8);
     assert(res_valid == 0);
     assert(rb.buffer != NULL);
@@ -63,8 +67,8 @@ int main(void) {
     assert(rb.head == 0);
     assert(rb.tail == 0);
     assert(rb.size == 0);
-    
-    // Test 3: Push up to capacity and pop
+
+    // Test 4: Push up to capacity and pop
     for (int i = 1; i <= 8; i++) {
         telemetry_sample_t sample = { .timestamp = i, .cpu_temp = (double)i, .ram_utilization = (double)i };
         int push_res = ring_buffer_push(&rb, sample);
@@ -73,7 +77,7 @@ int main(void) {
     }
     assert(rb.size == 8);
     
-    // Test 4: Overwrite oldest when pushing beyond capacity
+    // Test 5: Overwrite oldest when pushing beyond capacity
     // Pushing 9th element: should overwrite the 1st element (value 1)
     telemetry_sample_t sample_9 = { .timestamp = 9, .cpu_temp = 9.0, .ram_utilization = 9.0 };
     int push_res = ring_buffer_push(&rb, sample_9);
@@ -96,7 +100,7 @@ int main(void) {
     
     ring_buffer_destroy(&rb);
     
-    // Test 5: Concurrency test with multiple threads
+    // Test 6: Concurrency test with multiple threads
     int init_res = ring_buffer_init(&rb, BUFFER_CAPACITY);
     assert(init_res == 0);
     
