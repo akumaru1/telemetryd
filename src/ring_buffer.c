@@ -20,10 +20,11 @@ int ring_buffer_init(ring_buffer_t *rb, size_t capacity) {
     rb->capacity = capacity;
     rb->head = 0;
     rb->tail = 0;
-    rb->size = 0;
-    
+    rb->count = 0;
+
     return 0;
 }
+
 
 void ring_buffer_destroy(ring_buffer_t *rb) {
     if (rb == NULL) {
@@ -39,13 +40,15 @@ void ring_buffer_destroy(ring_buffer_t *rb) {
     rb->capacity = 0;
     rb->head = 0;
     rb->tail = 0;
-    rb->size = 0;
-    
+    rb->count = 0;
+
     pthread_mutex_unlock(&rb->lock);
 
     pthread_mutex_destroy(&rb->lock);
 }
 
+
+//modulo operator
 int ring_buffer_push(ring_buffer_t *rb, telemetry_sample_t sample) {
     if (rb == NULL) {
         return RB_ERR_INVALID_ARG;
@@ -58,22 +61,23 @@ int ring_buffer_push(ring_buffer_t *rb, telemetry_sample_t sample) {
         return RB_ERR_NOT_INITIALIZED;
     }
 
-    if (rb->size == rb->capacity) {
-        // Buffer is full: overwrite the oldest element at head
-        rb->buffer[rb->tail] = sample;
-        rb->tail = (rb->tail + 1) % rb->capacity;
-        rb->head = (rb->head + 1) % rb->capacity; // Discard oldest
+    if (rb->count == rb->capacity) {
+        // Buffer is full: write at head, then rewrite the oldest element at tail
+        rb->buffer[rb->head] = sample;
+        rb->head = (rb->head + 1) % rb->capacity;
+        rb->tail = (rb->tail + 1) % rb->capacity; // Discard oldest
     } else {
         // Normal enqueue
-        rb->buffer[rb->tail] = sample;
-        rb->tail = (rb->tail + 1) % rb->capacity;
-        rb->size++;
+        rb->buffer[rb->head] = sample;
+        rb->head = (rb->head + 1) % rb->capacity;
+        rb->count++;
     }
 
     pthread_mutex_unlock(&rb->lock);
 
     return 0;
 }
+
 
 int ring_buffer_pop(ring_buffer_t *rb, telemetry_sample_t *sample) {
     if (rb == NULL || sample == NULL) {
@@ -87,19 +91,20 @@ int ring_buffer_pop(ring_buffer_t *rb, telemetry_sample_t *sample) {
         return RB_ERR_NOT_INITIALIZED;
     }
 
-    if (rb->size == 0) {
+    if (rb->count == 0) {
         pthread_mutex_unlock(&rb->lock);
         return RB_ERR_EMPTY;
     }
     
-    *sample = rb->buffer[rb->head];
-    rb->head = (rb->head + 1) % rb->capacity;
-    rb->size--;
+    *sample = rb->buffer[rb->tail];
+    rb->tail = (rb->tail + 1) % rb->capacity;
+    rb->count--;
 
     pthread_mutex_unlock(&rb->lock);
 
     return 0;
 }
+
 
 const char *ring_buffer_strerror(int err) {
     switch (err) {

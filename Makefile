@@ -13,7 +13,7 @@ OBJ_FILES = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRC_FILES))
 # Executable name
 TARGET = $(BIN_DIR)/telemetryd
 
-.PHONY: all clean test test_sysfs test_procfs test_telemetry test_ring_buffer docs
+.PHONY: all clean test test_sysfs test_procfs test_telemetry test_ring_buffer
 
 all: $(TARGET)
 
@@ -27,7 +27,7 @@ $(BIN_DIR) $(OBJ_DIR):
 	mkdir -p $@
 
 clean:
-	rm -rf $(OBJ_DIR) $(BIN_DIR) docs/html docs/latex
+	rm -rf $(OBJ_DIR) $(BIN_DIR)
 
 test: test_sysfs test_procfs test_telemetry test_ring_buffer
 
@@ -46,6 +46,3 @@ test_telemetry: $(SRC_DIR)/sysfs_ingest.c $(SRC_DIR)/procfs_ingest.c $(TEST_DIR)
 test_ring_buffer: $(SRC_DIR)/ring_buffer.c $(TEST_DIR)/test_ring_buffer.c | $(BIN_DIR)
 	$(CC) $(CFLAGS) -pthread -o $(BIN_DIR)/test_ring_buffer $^
 	$(BIN_DIR)/test_ring_buffer
-
-docs:
-	doxygen Doxyfile

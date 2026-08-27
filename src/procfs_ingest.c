@@ -6,12 +6,13 @@
 
 int read_ram_utilization(double *ram_utilization) {
     if (!ram_utilization) {
+        /* RAM_ERR_INVALID_ARG: "invalid argument (NULL output pointer)" */
         return RAM_ERR_INVALID_ARG;
     }
 
     FILE *fp = fopen(PROCFS_MEMINFO_PATH, "r");
     if (!fp) {
-        perror("Error opening /proc/meminfo file");
+        /* RAM_ERR_NO_FILE: "/proc/meminfo not found or not openable" */
         return RAM_ERR_NO_FILE;
     }
 
@@ -34,19 +35,19 @@ int read_ram_utilization(double *ram_utilization) {
     }
 
     if (ferror(fp)) {
-        fprintf(stderr, "Error reading %s\n", PROCFS_MEMINFO_PATH);
         fclose(fp);
+        /* RAM_ERR_READ_FAILED: "read from /proc/meminfo failed" */
         return RAM_ERR_READ_FAILED;
     }
     fclose(fp);
 
     if (!has_total || mem_total == 0) {
-        fprintf(stderr, "Error: MemTotal missing or zero in %s\n", PROCFS_MEMINFO_PATH);
+        /* RAM_ERR_PARSE_FAILED: "/proc/meminfo missing or invalid MemTotal field" */
         return RAM_ERR_PARSE_FAILED;
     }
 
     if (!has_available) {
-        fprintf(stderr, "Error: MemAvailable missing in %s\n", PROCFS_MEMINFO_PATH);
+        /* RAM_ERR_NO_AVAILABLE: "/proc/meminfo missing MemAvailable field" */
         return RAM_ERR_NO_AVAILABLE;
     }
 

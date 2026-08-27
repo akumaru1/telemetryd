@@ -68,20 +68,20 @@ static void resolve_temp_path_once(void) {
 
 int read_cpu_temp(double *temp_celsius) {
     if (!temp_celsius) {
+        /* TEMP_ERR_INVALID_ARG: "invalid argument (NULL output pointer)" */
         return TEMP_ERR_INVALID_ARG;
     }
 
     pthread_once(&temp_path_once, resolve_temp_path_once);
 
     if (resolved_temp_path[0] == '\0') {
-        fprintf(stderr, "Error: no supported CPU temp sensor found under %s\n",
-                SYSFS_PATH);
+        /* TEMP_ERR_NO_SENSOR: "no supported CPU temp sensor (k10temp/coretemp) found" */
         return TEMP_ERR_NO_SENSOR;
     }
 
     int fd = open(resolved_temp_path, O_RDONLY | O_CLOEXEC);
     if (fd < 0) {
-        perror("Error opening temperature sysfs file");
+        /* TEMP_ERR_NO_FILE: "sysfs temperature file not found or not openable" */
         return TEMP_ERR_NO_FILE;
     }
 
@@ -90,6 +90,7 @@ int read_cpu_temp(double *temp_celsius) {
     close(fd);
 
     if (bytes_read <= 0) {
+        /* TEMP_ERR_READ_FAILED: "read from sysfs temperature file failed" */
         return TEMP_ERR_READ_FAILED;
     }
 
@@ -100,10 +101,12 @@ int read_cpu_temp(double *temp_celsius) {
     /* endptr == buf: no digits parsed at all. Allow a trailing newline
      * (sysfs files are newline-terminated) but reject anything else. */
     if (endptr == buf || (*endptr != '\0' && *endptr != '\n')) {
+        /* TEMP_ERR_PARSE_FAILED: "sysfs temperature value unparsable or out of range" */
         return TEMP_ERR_PARSE_FAILED;
     }
 
     if (temp_milli < 0 || temp_milli > 150000) {
+        /* TEMP_ERR_PARSE_FAILED: "sysfs temperature value unparsable or out of range" */
         return TEMP_ERR_PARSE_FAILED;
     }
 

@@ -92,7 +92,8 @@ static void *collector_thread_func(void *arg) {
     if (res_cpu == 0 && res_ram == 0) {
       int push_res = ring_buffer_push(&rb, sample);
       if (push_res != 0) {
-        fprintf(stderr, "Collector warning: failed to push sample to ring buffer: %d\n", push_res);
+        fprintf(stderr, "Collector warning: failed to push sample to ring buffer: %s [%d]\n",
+                ring_buffer_strerror(push_res), push_res);
       }
     } else {
       fprintf(stderr, "Collector error: failed to read metrics (CPU: %s [%d], RAM: %s [%d])\n",
@@ -192,8 +193,10 @@ int main(int argc, char *argv[]) {
   }
 
   // Initialize ring buffer
-  if (ring_buffer_init(&rb, 64) != 0) {
-    fprintf(stderr, "Failed to initialize ring buffer.\n");
+  int rb_rc = ring_buffer_init(&rb, 64);
+  if (rb_rc != 0) {
+    fprintf(stderr, "Failed to initialize ring buffer: %s [%d]\n",
+            ring_buffer_strerror(rb_rc), rb_rc);
     return 1;
   }
 
