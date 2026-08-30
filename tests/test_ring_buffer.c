@@ -66,23 +66,23 @@ int main(void) {
     assert(rb.capacity == 8);
     assert(rb.head == 0);
     assert(rb.tail == 0);
-    assert(rb.size == 0);
+    assert(rb.count == 0);
 
     // Test 4: Push up to capacity and pop
     for (int i = 1; i <= 8; i++) {
         telemetry_sample_t sample = { .timestamp = i, .cpu_temp = (double)i, .ram_utilization = (double)i };
         int push_res = ring_buffer_push(&rb, sample);
         assert(push_res == 0);
-        assert(rb.size == (size_t)i);
+        assert(rb.count == (size_t)i);
     }
-    assert(rb.size == 8);
+    assert(rb.count == 8);
     
     // Test 5: Overwrite oldest when pushing beyond capacity
     // Pushing 9th element: should overwrite the 1st element (value 1)
     telemetry_sample_t sample_9 = { .timestamp = 9, .cpu_temp = 9.0, .ram_utilization = 9.0 };
     int push_res = ring_buffer_push(&rb, sample_9);
     assert(push_res == 0);
-    assert(rb.size == 8); // Size remains 8
+    assert(rb.count == 8); // Size remains 8
     
     // Popping should yield elements from 2 to 9
     telemetry_sample_t popped;
@@ -94,7 +94,7 @@ int main(void) {
     }
     
     // Buffer should now be empty
-    assert(rb.size == 0);
+    assert(rb.count == 0);
     pop_res = ring_buffer_pop(&rb, &popped);
     assert(pop_res != 0); // Should fail
     

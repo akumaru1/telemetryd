@@ -13,12 +13,12 @@
 #define RB_ERR_EMPTY             (-5) /* buffer has no samples to pop (ring_buffer_pop) */
 
 typedef struct {
-    telemetry_sample_t *buffer; 
-    size_t capacity;            
-    size_t head;                
-    size_t tail;                
-    size_t count;
-    pthread_mutex_t lock;      
+    telemetry_sample_t *buffer; /**< Dynamic array of telemetry samples */
+    size_t capacity;            /**< Maximum number of samples the buffer can hold */
+    size_t head;                /**< Index of the oldest sample; pop reads from here */
+    size_t tail;                /**< Index of the next free slot; push writes here */
+    size_t count;               /**< Current number of samples stored in the buffer */
+    pthread_mutex_t lock;       /**< Mutex protecting all fields for thread-safety */
 } ring_buffer_t;
 
 

@@ -14,7 +14,6 @@ To prevent disk I/O latency from affecting metric collection intervals, the daem
 - **Concurrency:** Decouples collection and writing using a thread-safe circular ring buffer protected by mutexes and condition variables.
 - **POSIX Signal Handling:**
   - `SIGINT` / `SIGTERM` signals trigger a graceful shutdown (draining remaining metrics, joining threads and freeing all resources).
-  - `SIGHUP` signal triggers runtime configuration reloading on the fly.
 
 ---
 
@@ -23,7 +22,6 @@ To prevent disk I/O latency from affecting metric collection intervals, the daem
 ```text
 telemetryd/
 ├── bin/           # Output directory for compiled binaries
-├── config/        # Daemon configuration file (daemon.conf)
 ├── include/       # Header files (.h)
 ├── obj/           # Intermediate object files (.o)
 ├── src/           # Daemon source code files (.c)
@@ -57,9 +55,9 @@ make clean
 
 ### 2. Configuration
 
-The daemon reads configuration from `config/daemon.conf`. You can customize the following fields:
-- `polling_frequency`: The time interval (in seconds) between each metrics snapshot.
-- `log_path`: The file path where telemetry data will be saved (defaults to `telemetry.log`).
+Configuration is compiled in. Adjust `POLLING_FREQUENCY` (seconds between metrics
+snapshots) and `LOG_PATH` (telemetry log file) at the top of `src/main.c` and
+rebuild. Defaults: `5` seconds, `telemetry.log`.
 
 ---
 
@@ -73,7 +71,6 @@ If you want to view metrics printed directly to your terminal screen in real tim
 
 **Example Output:**
 ```text
-Loaded config: polling_freq = 5, log_path = telemetry.log
 Running in console mode. Outputting directly to stdout.
 Telemetry daemon started. PID: 402621. Press Ctrl+C or kill to stop...
 Collector thread started.
@@ -86,15 +83,6 @@ Writer thread started.
 ---
 
 ## Runtime Operations
-
-### Dynamic Configuration Reloading
-To change settings (like changing the polling interval to 2 seconds or specifying a new log file path) without restarting the daemon:
-1. Open and update `config/daemon.conf`.
-2. Send a `SIGHUP` signal to the running daemon process:
-   ```bash
-   kill -HUP <PID>
-   ```
-The daemon will reload and apply the config.
 
 ### Graceful Shutdown
 To cleanly terminate the daemon process:

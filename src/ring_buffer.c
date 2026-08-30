@@ -48,7 +48,7 @@ void ring_buffer_destroy(ring_buffer_t *rb) {
 }
 
 
-//modulo operator
+// Push writes at the tail; when full it also advances the head to drop the oldest.
 int ring_buffer_push(ring_buffer_t *rb, telemetry_sample_t sample) {
     if (rb == NULL) {
         return RB_ERR_INVALID_ARG;
@@ -62,14 +62,15 @@ int ring_buffer_push(ring_buffer_t *rb, telemetry_sample_t sample) {
     }
 
     if (rb->count == rb->capacity) {
-        // Buffer is full: write at head, then rewrite the oldest element at tail
-        rb->buffer[rb->head] = sample;
-        rb->head = (rb->head + 1) % rb->capacity;
-        rb->tail = (rb->tail + 1) % rb->capacity; // Discard oldest
+        // Buffer is full: write at tail (== head when full), then advance
+        // head to discard the oldest sample
+        rb->buffer[rb->tail] = sample;
+        rb->tail = (rb->tail + 1) % rb->capacity;
+        rb->head = (rb->head + 1) % rb->capacity; // Discard oldest
     } else {
-        // Normal enqueue
-        rb->buffer[rb->head] = sample;
-        rb->head = (rb->head + 1) % rb->capacity;
+        // Normal enqueue at the tail
+        rb->buffer[rb->tail] = sample;
+        rb->tail = (rb->tail + 1) % rb->capacity;
         rb->count++;
     }
 
@@ -96,8 +97,9 @@ int ring_buffer_pop(ring_buffer_t *rb, telemetry_sample_t *sample) {
         return RB_ERR_EMPTY;
     }
     
-    *sample = rb->buffer[rb->tail];
-    rb->tail = (rb->tail + 1) % rb->capacity;
+    // Pop the oldest sample from the head
+    *sample = rb->buffer[rb->head];
+    rb->head = (rb->head + 1) % rb->capacity;
     rb->count--;
 
     pthread_mutex_unlock(&rb->lock);
